@@ -16,3 +16,5 @@ source venv/bin/activate
 pip install -r requirements.txt
 python3.6 bot.py
 ```
+
+Watch the log with `tail -f bot.log`
