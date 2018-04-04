@@ -1,0 +1,13 @@
+# The virtual environment
+venv/
+
+# Credentials
+praw.ini
+
+# Log files
+bot.log
+
+notes.txt
+
+__pycache__/
+.codeintel
