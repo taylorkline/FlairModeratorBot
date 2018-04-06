@@ -4,8 +4,9 @@ venv/
 # Credentials
 praw.ini
 
-# Log files
+# Log and db files
 bot.log
+submissions.db
 
 notes.txt
 
