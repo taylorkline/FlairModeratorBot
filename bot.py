@@ -3,6 +3,7 @@ import praw
 import pdb
 import sqlite3
 from datetime import datetime, timedelta
+from textwrap import dedent
 
 FLAIR_BY_MINS = 2
 FLAIR_TIME_LIMIT_HRS = 24
@@ -49,13 +50,23 @@ def check_new_submissions(moderated_subreddits):
                 continue
 
             with conn:
-                # TODO: More thorough reply
-                comment = submission.reply("Removed")
-                conn.execute("""INSERT INTO deleted_submissions VALUES (?, ?)
-                    """, (submission.id, comment.id))
+                comment = submission.reply(dedent(f"""
+                    This post has automatically been removed for not being flaired within {FLAIR_BY_MINS} minutes.
+                    When the post receives a flair it will automatically be restored.
+                    \n\n
+                    If you believe this removal was in error, please [contact the subreddit moderators.]
+                    (https://www.reddit.com/message/compose?to=/r/{submission.subreddit})
+                    ***
+                    ^(FlairModerator made with 🍵 and ❤️ by) ^[/u\/taylorkline](/user/taylorkline).
+                    ^(Visit /r/FlairModerator for more information.)
+                    """))
+                conn.execute("""INSERT INTO deleted_submissions
+                                    VALUES (?, ?)
+                                    """, (submission.id, comment.id))
                 submission.mod.remove()
-                logger.info(
-                    f"Submission {submission.id} removed due to lacking flair")
+
+            logger.info(
+                f"Submission {submission.id} removed due to lacking flair")
 
 
 def is_too_young(datetimeutc):
