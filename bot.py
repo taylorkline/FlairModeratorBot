@@ -44,23 +44,10 @@ def authenticate():
 def check_new_submissions(moderated_subreddits):
     for moderated_subreddit in moderated_subreddits:
         for submission in moderated_subreddit.new():
-            # TODO: Organize no-op functions in one if-statement
-            if submission.link_flair_text:
+            if (submission.link_flair_text
+                    or is_too_young(submission.created_utc)):
                 continue
 
-            # Post already in DB, no action
-            if conn.execute("""SELECT *
-                               FROM deleted_submissions
-                               WHERE submission_id=?""",
-                            (submission.id,)).fetchone():
-                print(f"Submission {submission.id} already in db")
-                continue
-
-            if (datetime.fromtimestamp(submission.created_utc) + timedelta(minutes=FLAIR_BY_MINS) > datetime.now()):
-                print("Submission too young to remove")
-                continue
-
-            # Post not flaired and older than FLAIR_BY, remove, leave comment, save in DB
             with conn:
                 # TODO: More thorough reply
                 comment = submission.reply("Removed")
@@ -69,6 +56,11 @@ def check_new_submissions(moderated_subreddits):
                 submission.mod.remove()
                 logger.info(
                     f"Submission {submission.id} removed due to lacking flair")
+
+
+def is_too_young(datetimeutc):
+    (datetime.fromtimestamp(datetimeutc) +
+     timedelta(minutes=FLAIR_BY_MINS) > datetime.now())
 
 
 def check_old_submissions_for_flair():
