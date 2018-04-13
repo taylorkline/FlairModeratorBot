@@ -70,8 +70,8 @@ def check_new_submissions(moderated_subreddits):
                 except sqlite3.IntegrityError:
                     logger.warn(f"Submission {submission.id} already recorded"
                                 " as removed, but we are removing it again."
-                                " Perhaps another moderator manually"
-                                " approved it.")
+                                " Perhaps another moderator manually approved"
+                                " it or the flair was later removed.")
                     comment.delete()
 
                 submission.mod.remove()
