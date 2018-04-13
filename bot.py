@@ -92,10 +92,23 @@ def check_old_submissions_for_flair(reddit):
     for submission_id, bot_comment_id in cur:
         submission = reddit.submission(id=submission_id)
 
-        if (datetime.fromtimestamp(submission.created_utc) +
-                timedelta(hours=FLAIR_TIME_LIMIT_HRS) < datetime.now()):
-            print(f"Removing submission {submission_id} permanently.")
+        if submission.link_flair_text:
+            logger.info(f"Submission {submission_id} approved since being "
+                        f"flaired with: {submission.link_flair_text}")
             with conn:
+                conn.execute("""DELETE FROM deleted_submissions
+                                    WHERE submission_id=?""",
+                             (submission_id,))
+                remove_bot_comment_tree(reddit.comment(id=bot_comment_id))
+                submission.mod.approve()
+        elif (datetime.fromtimestamp(submission.created_utc) +
+              timedelta(hours=FLAIR_TIME_LIMIT_HRS) < datetime.now()):
+            logger.info(f"Removing submission {submission_id} permanently as"
+                        f" {FLAIR_TIME_LIMIT_HRS} hours has elapsed.")
+            with conn:
+                conn.execute("""DELETE FROM deleted_submissions
+                                    WHERE submission_id=?""",
+                             (submission_id,))
                 submission.reply(dedent(f"""
                     Your submission has been permanently removed as it was not
                     flaired within {FLAIR_TIME_LIMIT_HRS} hours.
@@ -106,18 +119,14 @@ def check_old_submissions_for_flair(reddit):
                     ^[/u\/taylorkline](/user/taylorkline).
                     ^(Visit /r/FlairModerator for more information.)
                     """))
-                bot_comment = reddit.comment(id=bot_comment_id)
-                bot_comment.refresh()
-                comments_to_remove = bot_comment.replies.list() + [bot_comment]
-                for comment_to_remove in comments_to_remove:
-                    comment_to_remove.mod.remove()
+                remove_bot_comment_tree(reddit.comment(id=bot_comment_id))
 
-                conn.execute("""DELETE FROM deleted_submissions
-                                    WHERE submission_id=?""",
-                             (submission_id,))
 
-    # Now flaired? Remove my comment and children and approve
-    # note: retrieve my comment with reddit.comment(id=xxxxx)
+def remove_bot_comment_tree(bot_comment):
+    bot_comment.refresh()
+    comments_to_remove = bot_comment.replies.list() + [bot_comment]
+    for comment_to_remove in comments_to_remove:
+        comment_to_remove.mod.remove()
 
 
 def accept_moderator_invites():
