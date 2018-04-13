@@ -70,8 +70,8 @@ def check_new_submissions(moderated_subreddits):
 
 
 def is_too_young(datetimeutc):
-    (datetime.fromtimestamp(datetimeutc) +
-     timedelta(minutes=FLAIR_BY_MINS) > datetime.now())
+    return (datetime.fromtimestamp(datetimeutc) +
+            timedelta(minutes=FLAIR_BY_MINS) > datetime.now())
 
 
 def check_old_submissions_for_flair():
