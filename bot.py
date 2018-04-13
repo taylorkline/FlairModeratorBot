@@ -1,6 +1,5 @@
 import logging
 import praw
-import pdb
 import sqlite3
 from datetime import datetime, timedelta
 from textwrap import dedent
