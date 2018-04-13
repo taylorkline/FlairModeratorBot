@@ -25,7 +25,7 @@ def main():
 
     while True:
         check_new_submissions(reddit.user.moderator_subreddits())
-        check_old_submissions_for_flair()
+        check_old_submissions_for_flair(reddit)
         accept_moderator_invites()
 
 
@@ -82,14 +82,38 @@ def is_too_young(datetimeutc):
             timedelta(minutes=FLAIR_BY_MINS) > datetime.now())
 
 
-def check_old_submissions_for_flair():
+def check_old_submissions_for_flair(reddit):
     # iterate through each submission we have removed
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM deleted_submissions")
+    for submission_id, bot_comment_id in cur:
+        submission = reddit.submission(id=submission_id)
 
-    # Over FLAIR_TIME_LIMIT_HRS? Remove and post comment indicating time limit passed
+        if (datetime.fromtimestamp(submission.created_utc) +
+                timedelta(hours=FLAIR_TIME_LIMIT_HRS) < datetime.now()):
+            print(f"Removing submission {submission_id} permanently.")
+            with conn:
+                submission.reply(dedent(f"""
+                    Your submission has been permanently removed as it was not
+                    flaired within {FLAIR_TIME_LIMIT_HRS} hours.
+                    \n\n
+                    Feel free to create a new post and flair it appropriately.
+                    ***
+                    ^(FlairModerator made with 🍵 and ❤️ by) ^[/u\/taylorkline](/user/taylorkline).
+                    ^(Visit /r/FlairModerator for more information.)
+                    """))
+                bot_comment = reddit.comment(id=bot_comment_id)
+                bot_comment.refresh()
+                comments_to_remove = bot_comment.replies.list() + [bot_comment]
+                for comment_to_remove in comments_to_remove:
+                    comment_to_remove.mod.remove()
+
+                conn.execute("""DELETE FROM deleted_submissions
+                                    WHERE submission_id=?""",
+                             (submission_id,))
 
     # Now flaired? Remove my comment and children and approve
     # note: retrieve my comment with reddit.comment(id=xxxxx)
-    pass
 
 
 def accept_moderator_invites():
