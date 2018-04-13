@@ -51,13 +51,16 @@ def check_new_submissions(moderated_subreddits):
 
             with conn:
                 comment = submission.reply(dedent(f"""
-                    This post has automatically been removed for not being flaired within {FLAIR_BY_MINS} minutes.
-                    When the post receives a flair it will automatically be restored.
+                    This post has automatically been removed for not being
+                    flaired within {FLAIR_BY_MINS} minutes. When the post
+                    receives a flair, it will automatically be restored.
                     \n\n
-                    If you believe this removal was in error, please [contact the subreddit moderators.]
+                    If you believe this removal was in error,
+                    please [contact the subreddit moderators.]
                     (https://www.reddit.com/message/compose?to=/r/{submission.subreddit})
                     ***
-                    ^(FlairModerator made with 🍵 and ❤️ by) ^[/u\/taylorkline](/user/taylorkline).
+                    ^(FlairModerator made with 🍵 and ❤️ by)
+                    ^[/u\/taylorkline](/user/taylorkline).
                     ^(Visit /r/FlairModerator for more information.)
                     """))
                 try:
@@ -99,7 +102,8 @@ def check_old_submissions_for_flair(reddit):
                     \n\n
                     Feel free to create a new post and flair it appropriately.
                     ***
-                    ^(FlairModerator made with 🍵 and ❤️ by) ^[/u\/taylorkline](/user/taylorkline).
+                    ^(FlairModerator made with 🍵 and ❤️ by)
+                    ^[/u\/taylorkline](/user/taylorkline).
                     ^(Visit /r/FlairModerator for more information.)
                     """))
                 bot_comment = reddit.comment(id=bot_comment_id)
