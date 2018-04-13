@@ -26,7 +26,7 @@ def main():
     while True:
         check_new_submissions(reddit.user.moderator_subreddits())
         check_old_submissions_for_flair(reddit)
-        accept_moderator_invites()
+        accept_moderator_invites(reddit.inbox, reddit.user.me())
 
 
 def init_logging():
@@ -124,16 +124,51 @@ def check_old_submissions_for_flair(reddit):
 
 def remove_bot_comment_tree(bot_comment):
     bot_comment.refresh()
+    bot_comment.replies.replace_more()
     comments_to_remove = bot_comment.replies.list() + [bot_comment]
     for comment_to_remove in comments_to_remove:
         comment_to_remove.mod.remove()
 
 
-def accept_moderator_invites():
-    # invite includes flair & posts permissions, accept
+def accept_moderator_invites(inbox, me):
+    for msg in inbox.unread(limit=5):
+        msg.mark_read()
+        if msg.body.startswith("**gadzooks!") and msg.subreddit is not None:
+            try:
+                msg.subreddit.mod.accept_invite()
+            except praw.exceptions.APIException as e:
+                if e.error_type != "NO_INVITE_FOUND":
+                    raise e
+                logger.warn(f"Attempted to accept invite but no invitation"
+                            f" found. Message {msg} of type {type(msg)} with"
+                            f" body: {msg.body}")
 
-    # otherwise reject and message moderators
-    pass
+            # Verify permissions to function correctly
+            for moderator in msg.subreddit.moderator():
+                if moderator != me:
+                    continue
+
+                if not ("all" in moderator.mod_permissions or
+                        ("flair" in moderator.mod_permissions and
+                         "posts" in moderator.mod_permissions)):
+                    logger.info(f"Invited to subreddit {msg.subreddit}"
+                                f" but with incorrect permissions:"
+                                f" {moderator.mod_permissions}."
+                                f" Rejecting invitation with response.")
+                    msg.subreddit.moderator.leave()
+                    msg.reply("FlairModerator requires flair and"
+                              " posts permissions to function correctly."
+                              " The invitation has been rejected;"
+                              " please re-invite with flair and posts"
+                              " permissions.")
+                else:
+                    logger.info(f"Successfully invited as a moderator"
+                                f" of subreddit: {msg.subreddit}")
+                    msg.reply("/u/FlairModerator has joined your"
+                              " subreddit! Please visit"
+                              " /r/FlairModerator for more details"
+                              " or contact /u/taylorkline for any"
+                              " questions.")
 
 
 if __name__ == "__main__":
