@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 conn = sqlite3.connect("submissions.db")
 conn.execute("""
     CREATE TABLE IF NOT EXISTS deleted_submissions (
-        submission_id text NOT NULL PRIMARY KEY,
+        submission_id text NOT NULL PRIMARY KEY UNIQUE,
         bot_reply_comment_id text NOT NULL UNIQUE
     );
     """)
@@ -45,8 +45,8 @@ def authenticate():
 def check_new_submissions(moderated_subreddits):
     for moderated_subreddit in moderated_subreddits:
         for submission in moderated_subreddit.new():
-            if (submission.link_flair_text
-                    or is_too_young(submission.created_utc)):
+            if (submission.link_flair_text or
+                    is_too_young(submission.created_utc)):
                 continue
 
             with conn:
@@ -60,9 +60,17 @@ def check_new_submissions(moderated_subreddits):
                     ^(FlairModerator made with 🍵 and ❤️ by) ^[/u\/taylorkline](/user/taylorkline).
                     ^(Visit /r/FlairModerator for more information.)
                     """))
-                conn.execute("""INSERT INTO deleted_submissions
-                                    VALUES (?, ?)
-                                    """, (submission.id, comment.id))
+                try:
+                    conn.execute("""INSERT INTO deleted_submissions
+                                        VALUES (?, ?)
+                                        """, (submission.id, comment.id))
+                except sqlite3.IntegrityError:
+                    logger.warn(f"Submission {submission.id} already recorded"
+                                " as removed, but we are removing it again."
+                                " Perhaps another moderator manually"
+                                " approved it.")
+                    comment.delete()
+
                 submission.mod.remove()
 
             logger.info(
