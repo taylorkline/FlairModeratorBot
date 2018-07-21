@@ -1,11 +1,13 @@
+from datetime import datetime, timedelta
+from textwrap import dedent
+from time import sleep
 import logging
 import praw
 import sqlite3
-from datetime import datetime, timedelta
-from textwrap import dedent
+import sys
 
 FLAIR_BY_MINS = 2
-FLAIR_TIME_LIMIT_HRS = 24
+FLAIR_DEADLINE_HRS = 24
 
 logger = logging.getLogger(__name__)
 conn = sqlite3.connect("submissions.db")
@@ -18,7 +20,15 @@ conn.execute("""
 
 
 def main():
-    init_logging()
+    try:
+        run_bot()
+    except Exception as e:
+        logger.exception("Unhandled exception during bot execution")
+        sleep(20)
+    main()
+
+
+def run_bot():
     reddit = authenticate()
     logger.debug(f"Authenticated as {reddit.config.username}")
 
@@ -31,14 +41,18 @@ def main():
 def init_logging():
     logger.setLevel(logging.DEBUG)
     fh = logging.FileHandler("bot.log")
+    sh = logging.StreamHandler(sys.stdout)
     fh.setLevel(logging.DEBUG)
+    sh.setLevel(logging.DEBUG)
     formatter = logging.Formatter("%(levelname)s: %(asctime)s - %(message)s")
     fh.setFormatter(formatter)
+    sh.setFormatter(formatter)
     logger.addHandler(fh)
+    logger.addHandler(sh)
 
 
 def authenticate():
-    return praw.Reddit("FlairModerator")
+    return praw.Reddit()
 
 
 def check_new_submissions(moderated_subreddits):
@@ -101,16 +115,16 @@ def check_old_submissions_for_flair(reddit):
                 remove_bot_comment_tree(reddit.comment(id=bot_comment_id))
                 submission.mod.approve()
         elif (datetime.fromtimestamp(submission.created_utc) +
-              timedelta(hours=FLAIR_TIME_LIMIT_HRS) < datetime.now()):
+              timedelta(hours=FLAIR_DEADLINE_HRS) < datetime.now()):
             logger.info(f"Removing submission {submission_id} permanently as"
-                        f" {FLAIR_TIME_LIMIT_HRS} hours has elapsed.")
+                        f" {FLAIR_DEADLINE_HRS} hours has elapsed.")
             with conn:
                 conn.execute("""DELETE FROM deleted_submissions
                                     WHERE submission_id=?""",
                              (submission_id,))
                 submission.reply(dedent(f"""
                     Your submission has been permanently removed as it was not
-                    flaired within {FLAIR_TIME_LIMIT_HRS} hours.
+                    flaired within {FLAIR_DEADLINE_HRS} hours.
                     \n\n
                     Feel free to create a new post and flair it appropriately.
                     ***
@@ -171,4 +185,5 @@ def accept_moderator_invites(inbox, me):
 
 
 if __name__ == "__main__":
+    init_logging()
     main()

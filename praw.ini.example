@@ -1,4 +1,4 @@
-[FlairModerator]
+[DEFAULT]
 client_id=aaa
 client_secret=bbb
 username=MyBot
