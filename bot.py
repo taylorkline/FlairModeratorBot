@@ -6,8 +6,16 @@ import praw
 import sqlite3
 import sys
 
+# the opportunity window for a user to flair before their submission
+# is temporarily removed
 FLAIR_BY_MINS = 2
+
+# the amount of time before a submission is permanently removed and
+# the user is encouraged to re-submit
 FLAIR_DEADLINE_HRS = 24
+
+# we won't look at posts older than this after being invited to a new subreddit
+REACHBACK_HRS = 2
 
 logger = logging.getLogger(__name__)
 conn = sqlite3.connect("submissions.db")
@@ -58,6 +66,9 @@ def authenticate():
 def check_new_submissions(moderated_subreddits):
     for moderated_subreddit in moderated_subreddits:
         for submission in moderated_subreddit.new():
+            if (is_too_old(submission.created_utc)):
+                break
+
             if (submission.link_flair_text or
                     is_too_young(submission.created_utc)):
                 continue
@@ -91,6 +102,11 @@ def check_new_submissions(moderated_subreddits):
 
             logger.info(
                 f"Submission {submission.id} removed due to lacking flair")
+
+
+def is_too_old(datetimeutc):
+    return (datetime.fromtimestamp(datetimeutc) +
+            timedelta(hours=REACHBACK_HRS) < datetime.now())
 
 
 def is_too_young(datetimeutc):
