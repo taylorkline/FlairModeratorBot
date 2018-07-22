@@ -92,7 +92,7 @@ def check_new_submissions(moderated_subreddits):
                                         VALUES (?, ?)
                                         """, (submission.id, comment.id))
                 except sqlite3.IntegrityError:
-                    logger.warn(f"Submission {submission.id} already recorded"
+                    logger.warn(f"Submission https://redd.it/{submission.id} already recorded"
                                 " as removed, but we are removing it again."
                                 " Perhaps another moderator manually approved"
                                 " it or the flair was later removed.")
@@ -101,7 +101,7 @@ def check_new_submissions(moderated_subreddits):
                 submission.mod.remove()
 
             logger.info(
-                f"Submission {submission.id} removed due to lacking flair")
+                f"Submission https://redd.it/{submission.id} removed due to lacking flair")
 
 
 def is_too_old(datetimeutc):
@@ -122,7 +122,7 @@ def check_old_submissions_for_flair(reddit):
         submission = reddit.submission(id=submission_id)
 
         if submission.link_flair_text:
-            logger.info(f"Submission {submission_id} approved since being "
+            logger.info(f"Submission https://redd.it/{submission_id} approved since being "
                         f"flaired with: {submission.link_flair_text}")
             with conn:
                 conn.execute("""DELETE FROM deleted_submissions
@@ -132,7 +132,7 @@ def check_old_submissions_for_flair(reddit):
                 submission.mod.approve()
         elif (datetime.fromtimestamp(submission.created_utc) +
               timedelta(hours=FLAIR_DEADLINE_HRS) < datetime.now()):
-            logger.info(f"Removing submission {submission_id} permanently as"
+            logger.info(f"Removing submission https://redd.it/{submission_id} permanently as"
                         f" {FLAIR_DEADLINE_HRS} hours has elapsed.")
             with conn:
                 conn.execute("""DELETE FROM deleted_submissions
