@@ -18,3 +18,8 @@ python3.6 bot.py
 ```
 
 This bot logs to `./bot.log` and `stdout`.
+
+Contributing
+------------
+
+The `develop` branch is used to development. `master` reflects the current state of production.
