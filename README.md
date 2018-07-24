@@ -1,7 +1,7 @@
 Flair Moderator
 =============
 
-TODO
+[/u/FlairModerator](https://www.reddit.com/user/flairmoderator) ensures that every submission on a subreddit will have flair. For more details, please visit [/r/FlairModerator](https://www.reddit.com/r/FlairModerator/).
 
 About
 -----
