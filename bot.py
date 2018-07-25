@@ -75,9 +75,9 @@ def check_new_submissions(moderated_subreddits):
 
             with conn:
                 comment = submission.reply(dedent(f"""
-                    This post has automatically been removed for not being
-                    flaired within {FLAIR_BY_MINS} minutes. When the post
-                    receives a flair, it will automatically be restored.
+                    Your submission has temporarily been removed until it
+                    receives flair. Please add a flair to your submission
+                    and it will automatically be restored.
                     \n\n
                     If you believe this removal was in error,
                     please [contact the subreddit moderators.]
