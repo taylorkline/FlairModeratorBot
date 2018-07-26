@@ -5,6 +5,7 @@ import logging
 import praw
 import sqlite3
 import sys
+from pdb import set_trace
 
 # the opportunity window for a user to flair before their submission
 # is temporarily removed
@@ -25,6 +26,12 @@ conn.execute("""
         bot_reply_comment_id text NOT NULL UNIQUE
     );
     """)
+try:
+    conn.execute("""
+        ALTER TABLE deleted_submissions ADD COLUMN subreddit_id text;
+        """)
+except sqlite3.OperationalError:
+    pass
 
 
 def main():
@@ -39,11 +46,17 @@ def main():
 def run_bot():
     reddit = authenticate()
     logger.debug(f"Authenticated as {reddit.config.username}")
+    # TODO: Handle when completely removed as a moderator
+    for sub in reddit.user.moderator_subreddits():
+        for mod in sub.moderator():
+            if mod == reddit.user.me():
+                print(perms_ok(mod.mod_permissions))
 
-    while True:
-        check_new_submissions(reddit.user.moderator_subreddits())
-        check_old_submissions_for_flair(reddit)
-        accept_moderator_invites(reddit.inbox, reddit.user.me())
+    # while True:
+    #     verify_permissions(reddit.user.moderator_subreddits(), reddit.user.me())
+    #     check_new_submissions(reddit.user.moderator_subreddits())
+    #     check_old_submissions_for_flair(reddit)
+    #     accept_moderator_invites(reddit.inbox, reddit.user.me())
 
 
 def init_logging():
@@ -63,10 +76,28 @@ def authenticate():
     return praw.Reddit()
 
 
+def verify_permission(moderated_subreddits, me):
+    for sub in moderated_subreddits:
+        for mod in sub.moderator():
+            if mod == me and not perms_ok(mod.mod_permissions):
+                sub.message("FlairModerator leaving",
+                            "FlairModerator requires flair and"
+                            " posts permissions to function correctly."
+                            " I have left your subreddit."
+                            " Please make sure to re-approve any posts I removed,"
+                            " as I cannot restore them once flaired."
+                            " You can re-invite me with flair and posts"
+                            " permissions.")
+                sub.moderator.leave()
+                # TODO: Clean up DB
+                # TODO: Leave subreddit with message including links to all removed posts
+                # TODO: Delete own posts
+
+
 def check_new_submissions(moderated_subreddits):
     for moderated_subreddit in moderated_subreddits:
         for submission in moderated_subreddit.new():
-            if (is_too_old(submission.created_utc)):
+            if is_too_old(submission.created_utc):
                 break
 
             if (submission.link_flair_text or
@@ -177,9 +208,7 @@ def accept_moderator_invites(inbox, me):
                 if moderator != me:
                     continue
 
-                if not ("all" in moderator.mod_permissions or
-                        ("flair" in moderator.mod_permissions and
-                         "posts" in moderator.mod_permissions)):
+                if not perms_ok(moderator.mod_permissions):
                     logger.info(f"Invited to subreddit {msg.subreddit}"
                                 f" but with incorrect permissions:"
                                 f" {moderator.mod_permissions}."
@@ -198,6 +227,10 @@ def accept_moderator_invites(inbox, me):
                               " /r/FlairModerator for more details"
                               " or contact /u/taylorkline for any"
                               " questions.")
+
+
+def perms_ok(perms):
+    return "all" in perms or ("flair" in perms and "posts" in perms)
 
 
 if __name__ == "__main__":
